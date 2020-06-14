@@ -34,8 +34,8 @@ type Reader struct {
 	rd           io.Reader // reader provided by the client
 	r, w         int       // buf read and write positions
 	err          error
-	lastByte     int // last byte read for UnreadByte; -1 means invalid
 	lastRuneSize int // size of last rune read for UnreadRune; -1 means invalid
+	lastByte     int // last byte read for UnreadByte; -1 means invalid
 }
 
 const minReadBufferSize = 16
@@ -46,10 +46,13 @@ const maxConsecutiveEmptyReads = 100
 // size, it returns the underlying Reader.
 func NewReaderSize(rd io.Reader, size int) *Reader {
 	// Is it already a Reader?
+	// 如果已经是一个Reader了
 	b, ok := rd.(*Reader)
 	if ok && len(b.buf) >= size {
 		return b
 	}
+
+	// 最小16个字节
 	if size < minReadBufferSize {
 		size = minReadBufferSize
 	}
@@ -86,7 +89,9 @@ var errNegativeRead = errors.New("bufio: reader returned negative count from Rea
 // fill reads a new chunk into the buffer.
 func (b *Reader) fill() {
 	// Slide existing data to beginning.
+	// 之前有读过
 	if b.r > 0 {
+		// 将数据移动到开始的地方
 		copy(b.buf, b.buf[b.r:b.w])
 		b.w -= b.r
 		b.r = 0
@@ -97,6 +102,7 @@ func (b *Reader) fill() {
 	}
 
 	// Read new data: try a limited number of times.
+	// 连续读
 	for i := maxConsecutiveEmptyReads; i > 0; i-- {
 		n, err := b.rd.Read(b.buf[b.w:])
 		if n < 0 {
@@ -107,6 +113,7 @@ func (b *Reader) fill() {
 			b.err = err
 			return
 		}
+		// 喂了一次正常就可以
 		if n > 0 {
 			return
 		}
@@ -134,12 +141,15 @@ func (b *Reader) Peek(n int) ([]byte, error) {
 
 	b.lastByte = -1
 	b.lastRuneSize = -1
-
+	// 小于要peek的字节，填充buffer
 	for b.w-b.r < n && b.w-b.r < len(b.buf) && b.err == nil {
+		// 将buffer喂满，并且可能的情况下，把窗口往前移动
 		b.fill() // b.w-b.r < len(b.buf) => buffer is not full
 	}
 
+	// 大于目前buffer的大小
 	if n > len(b.buf) {
+		// 尽可能返回能peek的字节数
 		return b.buf[b.r:b.w], ErrBufferFull
 	}
 
@@ -196,30 +206,42 @@ func (b *Reader) Discard(n int) (discarded int, err error) {
 // To read exactly len(p) bytes, use io.ReadFull(b, p).
 // At EOF, the count will be zero and err will be io.EOF.
 func (b *Reader) Read(p []byte) (n int, err error) {
+	// 查看slice的大小
 	n = len(p)
 	if n == 0 {
+		// 如果还有剩余的，那么不返回错误
 		if b.Buffered() > 0 {
 			return 0, nil
 		}
+		// 返回上次的读取的错误
 		return 0, b.readErr()
 	}
+
+	// 已从buffer中读完
 	if b.r == b.w {
+		// 上一次读取失败，将结果返回
 		if b.err != nil {
 			return 0, b.readErr()
 		}
+		//
 		if len(p) >= len(b.buf) {
 			// Large read, empty buffer.
 			// Read directly into p to avoid copy.
+			// 再一次从数据源中读
 			n, b.err = b.rd.Read(p)
 			if n < 0 {
 				panic(errNegativeRead)
 			}
+			// 读出来了
 			if n > 0 {
 				b.lastByte = int(p[n-1])
 				b.lastRuneSize = -1
 			}
 			return n, b.readErr()
 		}
+		// len(p) < len(b.buf)
+		// 将buf重置
+		// 再一次从数据源中读
 		// One read.
 		// Do not use b.fill, which will loop.
 		b.r = 0
@@ -235,8 +257,11 @@ func (b *Reader) Read(p []byte) (n int, err error) {
 	}
 
 	// copy as much as we can
+	// 复制到到用户的slice中
+	// n表示copy的字节数
 	n = copy(p, b.buf[b.r:b.w])
 	b.r += n
+	// 更新上一次读取的位置
 	b.lastByte = int(b.buf[b.r-1])
 	b.lastRuneSize = -1
 	return n, nil
@@ -246,10 +271,13 @@ func (b *Reader) Read(p []byte) (n int, err error) {
 // If no byte is available, returns an error.
 func (b *Reader) ReadByte() (byte, error) {
 	b.lastRuneSize = -1
+	// buffer已经读完了
 	for b.r == b.w {
+		// 上一次读取失败，那么直接返回失败
 		if b.err != nil {
 			return 0, b.readErr()
 		}
+		// fill buffer
 		b.fill() // buffer is empty
 	}
 	c := b.buf[b.r]
@@ -568,10 +596,14 @@ type Writer struct {
 func NewWriterSize(w io.Writer, size int) *Writer {
 	// Is it already a Writer?
 	b, ok := w.(*Writer)
+	// 直接返回自己
 	if ok && len(b.buf) >= size {
 		return b
 	}
+
+	// 选择默认的size
 	if size <= 0 {
+		// 4KB
 		size = defaultBufSize
 	}
 	return &Writer{
@@ -604,18 +636,22 @@ func (b *Writer) Flush() error {
 	if b.n == 0 {
 		return nil
 	}
+	// 将目前的buffer写完
 	n, err := b.wr.Write(b.buf[0:b.n])
 	if n < b.n && err == nil {
 		err = io.ErrShortWrite
 	}
 	if err != nil {
+		// 写入了部分
 		if n > 0 && n < b.n {
+
 			copy(b.buf[0:b.n-n], b.buf[n:b.n])
 		}
 		b.n -= n
 		b.err = err
 		return err
 	}
+	//  更新索引
 	b.n = 0
 	return nil
 }
@@ -631,23 +667,32 @@ func (b *Writer) Buffered() int { return b.n }
 // If nn < len(p), it also returns an error explaining
 // why the write is short.
 func (b *Writer) Write(p []byte) (nn int, err error) {
+	// p的size大于可用的空间，那么
 	for len(p) > b.Available() && b.err == nil {
 		var n int
+		// 如果之前并没有写入任何数据q且
+		// 如果p的剩余字节数大于buffer，那么直接写到设备中。
 		if b.Buffered() == 0 {
 			// Large write, empty buffer.
 			// Write directly from p to avoid copy.
+			// 那么将p中的数据直接写道设备中
 			n, b.err = b.wr.Write(p)
 		} else {
+			// 将p到写buffer的后面
 			n = copy(b.buf[b.n:], p)
+			// 更新下次该写的起始位置
 			b.n += n
+			// 执行一次真正的写操作，让buffer空出来
 			b.Flush()
 		}
 		nn += n
+		// 更新p为未写完的数据
 		p = p[n:]
 	}
 	if b.err != nil {
 		return nn, b.err
 	}
+	// 将目前的可以容纳的，p中的数据copy到buf中
 	n := copy(b.buf[b.n:], p)
 	b.n += n
 	nn += n

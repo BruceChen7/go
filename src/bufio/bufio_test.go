@@ -44,10 +44,13 @@ func (r13 *rot13Reader) Read(p []byte) (int, error) {
 
 // Call ReadByte to accumulate the text of a file
 func readBytes(buf *Reader) string {
+	// 1000个字节的数组
 	var b [1000]byte
 	nb := 0
 	for {
+		// 读取一个字节
 		c, err := buf.ReadByte()
+		// 读到EOF退出
 		if err == io.EOF {
 			break
 		}
@@ -58,11 +61,14 @@ func readBytes(buf *Reader) string {
 			panic("Data: " + err.Error())
 		}
 	}
+	// 转成字符串
 	return string(b[0:nb])
 }
 
 func TestReaderSimple(t *testing.T) {
 	data := "hello world"
+	// string.NewReader相当于新建一个读的数据源
+	// NewReader，使用带有buffer的reader
 	b := NewReader(strings.NewReader(data))
 	if s := readBytes(b); s != "hello world" {
 		t.Errorf("simple hello world test failed: got %q", s)
@@ -149,6 +155,7 @@ func TestReader(t *testing.T) {
 		all += texts[i]
 		str += string(rune(i)%26 + 'a')
 	}
+	// 生成字母表
 	texts[len(texts)-1] = all
 
 	for h := 0; h < len(texts); h++ {

@@ -175,6 +175,7 @@ type Request struct {
 	// but will return EOF immediately when no body is present.
 	// The Server will close the request body. The ServeHTTP
 	// Handler does not need to.
+	// 请求body
 	Body io.ReadCloser
 
 	// GetBody defines an optional func to return a new copy of
@@ -962,12 +963,15 @@ func (r *Request) SetBasicAuth(username, password string) {
 
 // parseRequestLine parses "GET /foo HTTP/1.1" into its three parts.
 func parseRequestLine(line string) (method, requestURI, proto string, ok bool) {
+	// 用来返回第一个index, 给用空格来区分
 	s1 := strings.Index(line, " ")
+	// 返回的哥空格的index
 	s2 := strings.Index(line[s1+1:], " ")
 	if s1 < 0 || s2 < 0 {
 		return
 	}
 	s2 += s1 + 1
+	// 返回3个部分
 	return line[:s1], line[s1+1 : s2], line[s2+1:], true
 }
 
@@ -1003,11 +1007,14 @@ const (
 	keepHostHeader   = false
 )
 
+// 创建一个req
 func readRequest(b *bufio.Reader, deleteHostHeader bool) (req *Request, err error) {
+	// 新建一个文本协议的reader
 	tp := newTextprotoReader(b)
 	req = new(Request)
 
 	// First line: GET /index.html HTTP/1.0
+	// 读取一行
 	var s string
 	if s, err = tp.ReadLine(); err != nil {
 		return nil, err

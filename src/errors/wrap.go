@@ -12,6 +12,7 @@ import (
 // type contains an Unwrap method returning error.
 // Otherwise, Unwrap returns nil.
 func Unwrap(err error) error {
+	// 实现了Unwrap的接口
 	u, ok := err.(interface {
 		Unwrap() error
 	})
@@ -41,17 +42,20 @@ func Is(err, target error) bool {
 		return err == target
 	}
 
+	// 判断是否比较
 	isComparable := reflectlite.TypeOf(target).Comparable()
 	for {
 		if isComparable && err == target {
 			return true
 		}
+		// 实现了Is接口
 		if x, ok := err.(interface{ Is(error) bool }); ok && x.Is(target) {
 			return true
 		}
 		// TODO: consider supporting target.Is(err). This would allow
 		// user-definable predicates, but also may allow for coping with sloppy
 		// APIs, thereby making it easier to get away with them.
+		// 到头了，没有找到,return false
 		if err = Unwrap(err); err == nil {
 			return false
 		}

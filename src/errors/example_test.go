@@ -15,6 +15,7 @@ type MyError struct {
 	What string
 }
 
+// 实现接口，那么就是一个error
 func (e MyError) Error() string {
 	return fmt.Sprintf("%v: %v", e.When, e.What)
 }

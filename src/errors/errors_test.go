@@ -12,6 +12,8 @@ import (
 
 func TestNewEqual(t *testing.T) {
 	// Different allocations should not be equal.
+	// 内部实现是一种的不同
+	// 不同的内存地址，不一样
 	if errors.New("abc") == errors.New("abc") {
 		t.Errorf(`New("abc") == New("abc")`)
 	}

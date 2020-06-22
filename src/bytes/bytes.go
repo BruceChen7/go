@@ -17,6 +17,7 @@ import (
 // A nil argument is equivalent to an empty slice.
 func Equal(a, b []byte) bool {
 	// Neither cmd/compile nor gccgo allocates for these string conversions.
+	// 转换成string来对比
 	return string(a) == string(b)
 }
 
@@ -55,6 +56,7 @@ func explode(s []byte, n int) [][]byte {
 func Count(s, sep []byte) int {
 	// special case
 	if len(sep) == 0 {
+		// 返回码点数 + 1
 		return utf8.RuneCount(s) + 1
 	}
 	if len(sep) == 1 {

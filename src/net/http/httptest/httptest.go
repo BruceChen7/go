@@ -39,6 +39,7 @@ import (
 // To generate a client HTTP request instead of a server request, see
 // the NewRequest function in the net/http package.
 func NewRequest(method, target string, body io.Reader) *http.Request {
+	// 默认是Get方法
 	if method == "" {
 		method = "GET"
 	}
@@ -53,6 +54,7 @@ func NewRequest(method, target string, body io.Reader) *http.Request {
 	req.Close = false
 
 	if body != nil {
+		// 类型断言
 		switch v := body.(type) {
 		case *bytes.Buffer:
 			req.ContentLength = int64(v.Len())
@@ -75,10 +77,12 @@ func NewRequest(method, target string, body io.Reader) *http.Request {
 	// used publicly.
 	req.RemoteAddr = "192.0.2.1:1234"
 
+	// 默认设置为example.com
 	if req.Host == "" {
 		req.Host = "example.com"
 	}
 
+	// https设置tls版本
 	if strings.HasPrefix(target, "https://") {
 		req.TLS = &tls.ConnectionState{
 			Version:           tls.VersionTLS12,

@@ -55,15 +55,18 @@ package errors
 
 // New returns an error that formats as the given text.
 // Each call to New returns a distinct error value even if the text is identical.
+// 创建新的error
 func New(text string) error {
 	return &errorString{text}
 }
 
 // errorString is a trivial implementation of error.
+// 内部实现的结构体
 type errorString struct {
 	s string
 }
 
+// 一种实现了了error
 func (e *errorString) Error() string {
 	return e.s
 }

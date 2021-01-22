@@ -351,6 +351,7 @@ type sudog struct {
 
 	next *sudog
 	prev *sudog
+    // 数据元素
 	elem unsafe.Pointer // data element (may point to stack)
 
 	// The following fields are never accessed concurrently.

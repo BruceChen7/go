@@ -25,20 +25,23 @@ import (
 
 const (
 	maxAlign  = 8
+    // 这部分size包含了
 	hchanSize = unsafe.Sizeof(hchan{}) + uintptr(-int(unsafe.Sizeof(hchan{}))&(maxAlign-1))
 	debugChan = false
 )
 
 type hchan struct {
+    // 整个发送的数据量
 	qcount   uint           // total data in the queue
+    // 循环队列的容量
 	dataqsiz uint           // size of the circular queue
 	buf      unsafe.Pointer // points to an array of dataqsiz elements
-	elemsize uint16
+	elemsize uint16  // channel能够手法的元素大小
 	closed   uint32
-	elemtype *_type // element type
-	sendx    uint   // send index
-	recvx    uint   // receive index
-	recvq    waitq  // list of recv waiters
+	elemtype *_type // element type ，收发元素的类型
+	sendx    uint   // send index 发送处理的位置
+	recvx    uint   // receive index 接受处理的位置
+	recvq    waitq  // list of recv waiters // 存储当前因为缓冲区不足，阻塞的goroutine链表
 	sendq    waitq  // list of send waiters
 
 	// lock protects all fields in hchan, as well as several
@@ -72,13 +75,17 @@ func makechan(t *chantype, size int) *hchan {
 	elem := t.elem
 
 	// compiler checks this but be safe.
+    // 类型的size不能太大
 	if elem.size >= 1<<16 {
 		throw("makechan: invalid channel element type")
 	}
+    // 对其方式有问题
+    // 8 字节对齐
 	if hchanSize%maxAlign != 0 || elem.align > maxAlign {
 		throw("makechan: bad alignment")
 	}
 
+    // 算出带有缓冲区的大小
 	mem, overflow := math.MulUintptr(elem.size, uintptr(size))
 	if overflow || mem > maxAlloc-hchanSize || size < 0 {
 		panic(plainError("makechan: size out of range"))
@@ -90,8 +97,11 @@ func makechan(t *chantype, size int) *hchan {
 	// TODO(dvyukov,rlh): Rethink when collector can move allocated objects.
 	var c *hchan
 	switch {
+    // 没有缓冲区，那么只分配hChanSize
 	case mem == 0:
 		// Queue or element size is zero.
+        // 如果缓冲区大小为0  a := make(chan bool)
+        // 或者是chan struct{}
 		c = (*hchan)(mallocgc(hchanSize, nil, true))
 		// Race detector uses this location for synchronization.
 		c.buf = c.raceaddr()
@@ -99,9 +109,11 @@ func makechan(t *chantype, size int) *hchan {
 		// Elements do not contain pointers.
 		// Allocate hchan and buf in one call.
 		c = (*hchan)(mallocgc(hchanSize+mem, nil, true))
+        // 指针运算
 		c.buf = add(unsafe.Pointer(c), hchanSize)
 	default:
 		// Elements contain pointers.
+        // 这里调用了两次new/mallocgc函数
 		c = new(hchan)
 		c.buf = mallocgc(mem, elem, true)
 	}
@@ -160,6 +172,8 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 		if !block {
 			return false
 		}
+        // 如果对nil channel send, 会一直block
+        // 将当前的gorotine放在等待状态中
 		gopark(nil, nil, waitReasonChanSendNilChan, traceEvGoStop, 2)
 		throw("unreachable")
 	}
@@ -197,13 +211,16 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 		t0 = cputicks()
 	}
 
+    // 锁住
 	lock(&c.lock)
 
+    // 给closed channel 发送数据
 	if c.closed != 0 {
 		unlock(&c.lock)
 		panic(plainError("send on closed channel"))
 	}
 
+    // 在等待队列中有go routine，那么直接发送
 	if sg := c.recvq.dequeue(); sg != nil {
 		// Found a waiting receiver. We pass the value we want to send
 		// directly to the receiver, bypassing the channel buffer (if any).
@@ -211,6 +228,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 		return true
 	}
 
+    // 带缓冲区的发送
 	if c.qcount < c.dataqsiz {
 		// Space is available in the channel buffer. Enqueue the element to send.
 		qp := chanbuf(c, c.sendx)
@@ -220,6 +238,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 		}
 		typedmemmove(c.elemtype, qp, ep)
 		c.sendx++
+        // 到了队列头
 		if c.sendx == c.dataqsiz {
 			c.sendx = 0
 		}
@@ -234,7 +253,9 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
 	}
 
 	// Block on the channel. Some receiver will complete our operation for us.
+    // 获取发送数据使用的goroutine
 	gp := getg()
+    // 设置这一次阻塞发送的相关信息，比如
 	mysg := acquireSudog()
 	mysg.releasetime = 0
 	if t0 != 0 {
@@ -305,6 +326,7 @@ func send(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
 		}
 	}
 	if sg.elem != nil {
+        // 拷贝到sg.elem中
 		sendDirect(c.elemtype, sg, ep)
 		sg.elem = nil
 	}
@@ -314,6 +336,7 @@ func send(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
 	if sg.releasetime != 0 {
 		sg.releasetime = cputicks()
 	}
+    // 将goroutine从等待到ready状态
 	goready(gp, skip+1)
 }
 

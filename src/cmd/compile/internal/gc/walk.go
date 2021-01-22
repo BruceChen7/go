@@ -1567,6 +1567,7 @@ opswitch:
 		n1 = assignconv(n1, n.Left.Type.Elem(), "chan send")
 		n1 = walkexpr(n1, init)
 		n1 = nod(OADDR, n1, nil)
+        // ch <- i 这种语句，会将它解析成OSEND节点，并转换成chansend1函数
 		n = mkcall1(chanfn("chansend1", 2, n.Left.Type), nil, init, n.Left, n1)
 
 	case OCLOSURE:

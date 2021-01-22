@@ -689,7 +689,10 @@ func ready(gp *g, traceskip int, next bool) {
 	}
 
 	// status is Gwaiting or Gscanwaiting, make Grunnable and put on runq
+    // 改变goroutine的状态
 	casgstatus(gp, _Gwaiting, _Grunnable)
+    // 放到对于那个的队列中
+    // 放到local que中
 	runqput(_g_.m.p.ptr(), gp, next)
 	wakep()
 	releasem(mp)

@@ -29,8 +29,10 @@ const (
 // ../reflect/type.go:/^type.rtype.
 // ../internal/reflectlite/type.go:/^type.rtype.
 type _type struct {
+    // 类型本身的大小
 	size       uintptr
 	ptrdata    uintptr // size of memory prefix holding all pointers
+    // hash值
 	hash       uint32
 	tflag      tflag
 	align      uint8
@@ -43,6 +45,8 @@ type _type struct {
 	// If the KindGCProg bit is set in kind, gcdata is a GC program.
 	// Otherwise it is a ptrmask bitmap. See mbitmap.go for details.
 	gcdata    *byte
+    // 连接器负责嵌入，想对于可执行文件元信息的便宜两
+    // 都是Int32类型
 	str       nameOff
 	ptrToThis typeOff
 }
@@ -400,6 +404,7 @@ type arraytype struct {
 	len   uintptr
 }
 
+// channel type
 type chantype struct {
 	typ  _type
 	elem *_type

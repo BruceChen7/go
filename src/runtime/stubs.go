@@ -9,6 +9,7 @@ import "unsafe"
 // Should be a built-in for unsafe.Pointer?
 //go:nosplit
 func add(p unsafe.Pointer, x uintptr) unsafe.Pointer {
+    // 用来进行指针运算
 	return unsafe.Pointer(uintptr(p) + x)
 }
 

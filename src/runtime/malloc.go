@@ -903,6 +903,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 		throw("mallocgc called with gcphase == _GCmarktermination")
 	}
 
+    // 对于分配大小为0的，直接返回0地址
 	if size == 0 {
 		return unsafe.Pointer(&zerobase)
 	}

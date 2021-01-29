@@ -83,6 +83,7 @@ type mheap struct {
 	// store. Accesses during STW might not hold the lock, but
 	// must ensure that allocation cannot happen around the
 	// access (since that may free the backing store).
+    // 所有的页
 	allspans []*mspan // all spans out there
 
 	// sweepSpans contains two mspan stacks: one of swept in-use
@@ -242,6 +243,7 @@ type mheap struct {
 	unused *specialfinalizer // never set, just here to force the specialfinalizer type into DWARF
 }
 
+// 全局的mheap_
 var mheap_ mheap
 
 // A heapArena stores metadata for a heap arena. heapArenas are stored
@@ -400,13 +402,18 @@ type mSpanList struct {
 
 //go:notinheap
 type mspan struct {
+    // 这是一个链表
 	next *mspan     // next span in list, or nil if none
 	prev *mspan     // previous span in list, or nil if none
+    // 双向链表的头节点和尾巴节点
 	list *mSpanList // For debugging. TODO: Remove.
 
+    // 开始地址
 	startAddr uintptr // address of first byte of span aka s.base()
+    // mspan 管理页的数量
 	npages    uintptr // number of pages in span
 
+    // a list of free objects
 	manualFreeList gclinkptr // list of free objects in mSpanManual spans
 
 	// freeindex is the slot index between 0 and nelems at which to begin scanning
@@ -424,9 +431,10 @@ type mspan struct {
 	// undefined and should never be referenced.
 	//
 	// Object n starts at address n*elemsize + (start << pageShift).
-	freeindex uintptr
+	freeindex uintptr // 空闲对象的对象初始地址
 	// TODO: Look up nelems from sizeclass and remove this field if it
 	// helps performance.
+    // 能够存储的对象的总数
 	nelems uintptr // number of object in the span.
 
 	// Cache of the allocBits at freeindex. allocCache is shifted
@@ -474,11 +482,13 @@ type mspan struct {
 	divMul      uint16        // for divide by elemsize - divMagic.mul
 	baseMask    uint16        // if non-0, elemsize is a power of 2, & this will get object allocation base
 	allocCount  uint16        // number of allocated objects
+    // 跨度类
 	spanclass   spanClass     // size class and noscan (uint8)
 	state       mSpanStateBox // mSpanInUse etc; accessed atomically (get/set methods)
 	needzero    uint8         // needs to be zeroed before allocation
 	divShift    uint8         // for divide by elemsize - divMagic.shift
 	divShift2   uint8         // for divide by elemsize - divMagic.shift2
+    // 对象的大小
 	elemsize    uintptr       // computed from sizeclass or from npages
 	limit       uintptr       // end of data in span
 	speciallock mutex         // guards specials list
@@ -486,6 +496,7 @@ type mspan struct {
 }
 
 func (s *mspan) base() uintptr {
+    // 获取该span管理的首地址
 	return s.startAddr
 }
 
@@ -547,7 +558,11 @@ func recordspan(vh unsafe.Pointer, p unsafe.Pointer) {
 type spanClass uint8
 
 const (
+    // 67 * 2 span class
 	numSpanClasses = _NumSizeClasses << 1
+
+    // tinySizeClass值2，按位或表示该类型是非指针类型
+    // 这里的class为5
 	tinySpanClass  = spanClass(tinySizeClass<<1 | 1)
 )
 
@@ -555,6 +570,7 @@ func makeSpanClass(sizeclass uint8, noscan bool) spanClass {
 	return spanClass(sizeclass<<1) | spanClass(bool2int(noscan))
 }
 
+// size class 的最后一位表示是否是指针
 func (sc spanClass) sizeclass() int8 {
 	return int8(sc >> 1)
 }
@@ -1115,10 +1131,12 @@ func (h *mheap) allocSpan(npages uintptr, manual bool, spanclass spanClass, sysS
 
 	// If the allocation is small enough, try the page cache!
 	pp := gp.m.p.ptr()
+    // 从page cache中分配
 	if pp != nil && npages < pageCachePages/4 {
 		c := &pp.pcache
 
 		// If the cache is empty, refill it.
+        // 分配的cache为空
 		if c.empty() {
 			lock(&h.lock)
 			*c = h.pages.allocToCache()
@@ -1235,6 +1253,7 @@ HaveSpan:
 			s.divShift2 = 0
 			s.baseMask = 0
 		} else {
+            // 获取真正分配的大小
 			s.elemsize = uintptr(class_to_size[sizeclass])
 			s.nelems = nbytes / s.elemsize
 
@@ -1514,6 +1533,7 @@ func (span *mspan) init(base uintptr, npages uintptr) {
 	span.next = nil
 	span.prev = nil
 	span.list = nil
+    // 初始化首地址
 	span.startAddr = base
 	span.npages = npages
 	span.allocCount = 0

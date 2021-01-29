@@ -37,6 +37,7 @@ type mcache struct {
 
 	// The rest is not accessed on every malloc.
 
+    // 给每一个span class都分配一个mspan
 	alloc [numSpanClasses]*mspan // spans to allocate from, indexed by spanClass
 
 	stackcache [_NumStackOrders]stackfreelist
@@ -90,7 +91,9 @@ func allocmcache() *mcache {
 		c.flushGen = mheap_.sweepgen
 		unlock(&mheap_.lock)
 	})
+    // 给每种类型的span占住
 	for i := range c.alloc {
+        // 初始化
 		c.alloc[i] = &emptymspan
 	}
 	c.next_sample = nextSample()
@@ -121,6 +124,7 @@ func freemcache(c *mcache) {
 // c could change.
 func (c *mcache) refill(spc spanClass) {
 	// Return the current cached span to the central lists.
+    // 获取分配的span
 	s := c.alloc[spc]
 
 	if uintptr(s.allocCount) != s.nelems {

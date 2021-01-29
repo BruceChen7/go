@@ -16,6 +16,7 @@ func add(p unsafe.Pointer, x uintptr) unsafe.Pointer {
 // getg returns the pointer to the current g.
 // The compiler rewrites calls to this function into instructions
 // that fetch the g directly (from TLS or from the dedicated register).
+// 获取当前的g
 func getg() *g
 
 // mcall switches from the g to the g0 stack and invokes fn(g),
@@ -302,6 +303,7 @@ func call1073741824(typ, fn, arg unsafe.Pointer, n, retoffset uint32)
 func systemstack_switch()
 
 // alignUp rounds n up to a multiple of a. a must be a power of 2.
+// https://blog.csdn.net/innisfree01/article/details/106902538
 func alignUp(n, a uintptr) uintptr {
 	return (n + a - 1) &^ (a - 1)
 }

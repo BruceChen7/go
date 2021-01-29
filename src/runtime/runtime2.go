@@ -573,6 +573,7 @@ type p struct {
 	sysmontick  sysmontick // last tick observed by sysmon
 	m           muintptr   // back-link to associated m (nil if idle)
 	mcache      *mcache
+    // 分配的page cache
 	pcache      pageCache
 	raceprocctx uintptr
 
@@ -615,6 +616,7 @@ type p struct {
 		// slice updates is tricky, moreso than just managing the length
 		// ourselves.
 		len int
+        // 128个mspan
 		buf [128]*mspan
 	}
 

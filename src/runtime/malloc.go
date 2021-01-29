@@ -111,6 +111,7 @@ const (
 	debugMalloc = false
 
 	maxTinySize   = _TinySize
+    // 2
 	tinySizeClass = _TinySizeClass
 	maxSmallSize  = _MaxSmallSize
 
@@ -839,16 +840,23 @@ var zerobase uintptr
 // nextFreeFast returns the next free object if one is quickly available.
 // Otherwise it returns 0.
 func nextFreeFast(s *mspan) gclinkptr {
+    // 查看哪一个空闲
+    // 计算allocCachebi
 	theBit := sys.Ctz64(s.allocCache) // Is there a free object in the allocCache?
+    // 如果有空闲的
 	if theBit < 64 {
 		result := s.freeindex + uintptr(theBit)
+        // 小于分配的空闲数
 		if result < s.nelems {
 			freeidx := result + 1
+            // 没有找到
 			if freeidx%64 == 0 && freeidx != s.nelems {
 				return 0
 			}
 			s.allocCache >>= uint(theBit + 1)
+            // 更新
 			s.freeindex = freeidx
+            // 分配数据+1
 			s.allocCount++
 			return gclinkptr(result*s.elemsize + s.base())
 		}
@@ -953,6 +961,8 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	}
 
 	// Set mp.mallocing to keep from being preempted by GC.
+    // 阻止被抢占
+    // 获取m
 	mp := acquirem()
 	if mp.mallocing != 0 {
 		throw("malloc deadlock")
@@ -965,7 +975,9 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	shouldhelpgc := false
 	dataSize := size
 	var c *mcache
+    // 如果对应的m有p, 那么获取mcache
 	if mp.p != 0 {
+        // 获取mcache
 		c = mp.p.ptr().mcache
 	} else {
 		// We will be called without a P while bootstrapping,
@@ -981,7 +993,8 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	var x unsafe.Pointer
 	noscan := typ == nil || typ.ptrdata == 0
 	if size <= maxSmallSize {
-		if noscan && size < maxTinySize {
+        // 如果分配的对象不包含指针且s分配的对象小于tinbysize
+		if noscan && size < maxTinySize { // 16 byte
 			// Tiny allocator.
 			//
 			// Tiny allocator combines several tiny allocation requests
@@ -1011,27 +1024,38 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 			// standalone escaping variables. On a json benchmark
 			// the allocator reduces number of allocations by ~12% and
 			// reduces heap size by ~20%.
+            // 是一个指针
 			off := c.tinyoffset
 			// Align tiny pointer for required (conservative) alignment.
 			if size&7 == 0 {
+                // 8 字节对齐
 				off = alignUp(off, 8)
 			} else if size&3 == 0 {
 				off = alignUp(off, 4)
 			} else if size&1 == 0 {
 				off = alignUp(off, 2)
 			}
+            // 使用tiny分配，tiny已经分配过了
 			if off+size <= maxTinySize && c.tiny != 0 {
 				// The object fits into existing tiny block.
 				x = unsafe.Pointer(c.tiny + off)
+                // 更新新的偏移量
 				c.tinyoffset = off + size
+                // 更新tiny alloc的统计
 				c.local_tinyallocs++
+                // mp是GMP中的M
 				mp.mallocing = 0
+                // 允许抢占
 				releasem(mp)
 				return x
 			}
 			// Allocate a new maxTinySize block.
+            // 找到一个span
+            // 找到这个spanClass的头
 			span = c.alloc[tinySpanClass]
+            // 找空闲的span
 			v := nextFreeFast(span)
+            // r如果没有找到,那么分配
 			if v == 0 {
 				v, span, shouldhelpgc = c.nextFree(tinySpanClass)
 			}

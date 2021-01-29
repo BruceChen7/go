@@ -444,6 +444,7 @@ func timediv(v int64, div int32, rem *int32) int32 {
 
 //go:nosplit
 func acquirem() *m {
+    // 获取当前携程
 	_g_ := getg()
 	_g_.m.locks++
 	return _g_.m

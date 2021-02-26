@@ -205,6 +205,7 @@ func (s *mspan) nextFreeIndex() uintptr {
 	aCache := s.allocCache
 
 	bitIndex := sys.Ctz64(aCache)
+    // 如果有64个0
 	for bitIndex == 64 {
 		// Move index to start of next cached bits.
 		sfreeindex = (sfreeindex + 64) &^ (64 - 1)

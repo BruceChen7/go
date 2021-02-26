@@ -2631,6 +2631,7 @@ func (s *state) expr(n *Node) *ssa.Value {
 		switch {
 		case n.Left.Type.IsSlice():
 			op := ssa.OpSliceLen
+            // 分别转换成OpSliceLen或者是OPSliceCap
 			if n.Op == OCAP {
 				op = ssa.OpSliceCap
 			}

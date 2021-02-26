@@ -1960,8 +1960,8 @@ func (v Value) UnsafeAddr() uintptr {
 // it references will not be garbage collected, so programs must keep
 // a separate, correctly typed pointer to the underlying data.
 type StringHeader struct {
-	Data uintptr
-	Len  int
+	Data uintptr // 数据指针
+	Len  int // 长度
 }
 
 // SliceHeader is the runtime representation of a slice.
@@ -1970,8 +1970,9 @@ type StringHeader struct {
 // Moreover, the Data field is not sufficient to guarantee the data
 // it references will not be garbage collected, so programs must keep
 // a separate, correctly typed pointer to the underlying data.
+// 用来标识一个slice
 type SliceHeader struct {
-	Data uintptr
+	Data uintptr  // 指向数据的指针
 	Len  int
 	Cap  int
 }

@@ -577,6 +577,14 @@ func isSmallSliceLit(n *Node) bool {
 	return smallintconst(r) && (n.Type.Elem().Width == 0 || r.Int64() <= smallArrayBytes/n.Type.Elem().Width)
 }
 
+// 在编译期间将[]int{1,2,3}这种红类型的代码进行展开
+// var vstat [3]int
+// vstat[0] = 1
+// vstat[1] = 2
+// vstat[2] = 3
+// var vauto *[3]int = new([3]int)
+// *vauto = vstat
+// slice := vauto[:]
 func slicelit(ctxt initContext, n *Node, var_ *Node, init *Nodes) {
 	// make an array type corresponding the number of elements we have
 	t := types.NewArray(n.Type.Elem(), n.Right.Int64())
@@ -599,6 +607,7 @@ func slicelit(ctxt initContext, n *Node, var_ *Node, init *Nodes) {
 		return
 	}
 
+    // 这里解释了如何创建一个切片
 	// recipe for var = []t{...}
 	// 1. make a static array
 	//	var vstat [...]t

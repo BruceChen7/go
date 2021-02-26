@@ -1729,6 +1729,7 @@ func typecheck1(n *Node, top int) (res *Node) {
 		}
 
 		i := 1
+        // 根据make的的一个参数，来进行校验检查
 		switch t.Etype {
 		default:
 			yyerror("cannot make type %v", t)
@@ -1736,6 +1737,7 @@ func typecheck1(n *Node, top int) (res *Node) {
 			return n
 
 		case TSLICE:
+            // 马克接受的是slice
 			if i >= len(args) {
 				yyerror("missing len argument to make(%v)", t)
 				n.Type = nil
@@ -1768,7 +1770,8 @@ func typecheck1(n *Node, top int) (res *Node) {
 
 			n.Left = l
 			n.Right = r
-			n.Op = OMAKESLICE
+			n.Op = OMAKESLICE // 将OMAKE节点转换成OMAKESLICE节点，中间代码生成会根据这个节点OMAKESLICE
+            // 来判断切片的大小或者是否逃逸，来判断是否在堆中
 
 		case TMAP:
 			if i < len(args) {

@@ -481,6 +481,7 @@ func NewArray(elem *Type, bound int64) *Type {
 }
 
 // NewSlice returns the slice Type with element type elem.
+// 创建切片类型，编译期间生成切片中的元素类型类型
 func NewSlice(elem *Type) *Type {
 	if t := elem.Cache.slice; t != nil {
 		if t.Elem() != elem {
@@ -490,6 +491,8 @@ func NewSlice(elem *Type) *Type {
 	}
 
 	t := New(TSLICE)
+    // 包含切片内元素类型的结构
+    // 切片内的元素类型在编译期间确定，确定后，会存在Extra字段中
 	t.Extra = Slice{Elem: elem}
 	elem.Cache.slice = t
 	return t

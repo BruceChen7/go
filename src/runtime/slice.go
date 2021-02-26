@@ -80,6 +80,7 @@ func makeslicecopy(et *_type, tolen int, fromlen int, from unsafe.Pointer) unsaf
 	return to
 }
 
+// 用来创建slice,
 func makeslice(et *_type, len, cap int) unsafe.Pointer {
 	mem, overflow := math.MulUintptr(et.size, uintptr(cap))
 	if overflow || mem > maxAlloc || len < 0 || len > cap {
@@ -89,12 +90,15 @@ func makeslice(et *_type, len, cap int) unsafe.Pointer {
 		// supplied implicitly, saying len is clearer.
 		// See golang.org/issue/4085.
 		mem, overflow := math.MulUintptr(et.size, uintptr(len))
+        // 溢出，len无效，查过最大值
 		if overflow || mem > maxAlloc || len < 0 {
+            // 直接panic
 			panicmakeslicelen()
 		}
 		panicmakeslicecap()
 	}
 
+    // 直接分配内存
 	return mallocgc(mem, et, true)
 }
 
@@ -122,6 +126,7 @@ func makeslice64(et *_type, len64, cap64 int64) unsafe.Pointer {
 // to calculate where to write new values during an append.
 // TODO: When the old backend is gone, reconsider this decision.
 // The SSA backend might prefer the new length or to return only ptr/cap and save stack space.
+// 用来增加大小
 func growslice(et *_type, old slice, cap int) slice {
 	if raceenabled {
 		callerpc := getcallerpc()
@@ -142,10 +147,12 @@ func growslice(et *_type, old slice, cap int) slice {
 	}
 
 	newcap := old.cap
+    // double一下
 	doublecap := newcap + newcap
 	if cap > doublecap {
 		newcap = cap
 	} else {
+        // 小于1024字节翻倍
 		if old.len < 1024 {
 			newcap = doublecap
 		} else {
@@ -162,6 +169,7 @@ func growslice(et *_type, old slice, cap int) slice {
 		}
 	}
 
+    // 需要内存对其
 	var overflow bool
 	var lenmem, newlenmem, capmem uintptr
 	// Specialize for common values of et.size.
